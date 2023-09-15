@@ -1,5 +1,5 @@
 # mt_zhvi_game_localization
-a neural networks machine translation model for specific use cases such as chinese game/manwua/novel translation to vietnamese
+a neural networks machine translation model for specific use cases such as chinese game/manhua/novel translation to vietnamese
 
 model: https://drive.google.com/drive/folders/1ab8G1hx0hj5IenUrJV93Gpt1ywjIb8Km?usp=sharing
 
