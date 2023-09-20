@@ -10,11 +10,10 @@ A GUI demo on insight of how it works
 https://github.com/chihakuro/mt_zhvi_game_localization/assets/92619401/2731a313-6223-45d4-a656-abefb5fa03fa
 
 Requirements to run GUI:
-- Python 3 (preferably 3.9.5)
-- Step to run:
-  + Step 1: Have python installed in your system (with pip enabled)
-  + Step 2: Download the repository in link above
-  + Step 3: Open PowerShell/Command Prompt and link to the downloaded repository destination, for example
+
++ Step 1: Have [Python 3](https://www.python.org/downloads/release/python-395/) (preferably 3.9.5) installed in your system (with pip enabled)
++ Step 2: Download the repository in link above
++ Step 3: Open PowerShell/Command Prompt and link to the downloaded repository destination, for example
 
 To destination on the same disk:
 ```
@@ -29,13 +28,13 @@ PS D:\> cd D:\Temp
 PS D:\Temp>
 ```
 
-  + Step 4: Installing package requirements for GUI in order to work
++ Step 4: Installing package requirements for GUI in order to work
 
 ```
 pip install requirements
 ```
 
-  + Step 5: Run the interface in python environments or in PowerShell/Command Prompt:
++ Step 5: Run the interface in python environments or in PowerShell/Command Prompt:
 
 ```
 python whatisgui.py
