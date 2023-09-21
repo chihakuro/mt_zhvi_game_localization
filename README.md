@@ -31,7 +31,7 @@ PS D:\Temp>
 + Step 4: Installing package requirements for GUI in order to work
 
 ```
-pip install requirements
+pip install -r requirements.txt
 ```
 
 + Step 5: Run the interface in python environments or in PowerShell/Command Prompt:
