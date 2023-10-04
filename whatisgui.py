@@ -10,6 +10,7 @@ import re
 import torch
 import openai
 import json
+import time
 
 # set the parent directory to the directory of this file
 parent_dir = Path(__file__).parent
@@ -32,10 +33,11 @@ def get_model():
         # search for the model paths in the parent directory
         modl_name = []
         modl_dir = []
-        for i in os.listdir(parent_dir):
+        translators = parent_dir / 'translators'
+        for i in os.listdir(translators):
             if 'mmodel' in i or 'mcheckpoint' in i or 't5model' in i or 't5checkpoint' in i or 'gpt' in i or 'hanvie' in i:
                 modl_name.append(i)
-                modl_dir.append(parent_dir / i)
+                modl_dir.append(translators / i)
         # if the text file doesn't exist, create one
         with open(Path(__file__).with_name('models.txt'), 'w') as f:
             for i in range(len(modl_name)):
@@ -44,10 +46,30 @@ def get_model():
 
     return modl_name, modl_dir
 
+def get_lang():
+    try:
+        with open(Path(__file__).with_name('lang.txt'), 'r') as f:
+            # list of languages
+            lang = f.readlines()
+            lang = [i.strip() for i in lang]
+            print(lang)
+    except:
+        with open(Path(__file__).with_name('lang.txt'), 'w') as f:
+            f.write('Chinese')
+            f.write('\n')
+            f.write('Vietnamese')
+            f.write('\n')
+            f.write('English')
+        return get_lang()
+
+    return lang 
+
 modl_name, modl_dir = get_model()
 model_name = modl_name[-1]
 model_dir = modl_dir[-1]
 print(model_name, model_dir)
+language = get_lang()[-1]
+print(language)
 
 # if the current model path has 'model-finetuned' in it, use the MarianMTModel class
 if 'mmodel' in model_dir or 'mcheckpoint' in model_dir:
@@ -87,7 +109,7 @@ def punctuation_process(punctuation):
 def translate_s(text):
     global model_name, model_dir, tokenizer, model
     model_switch()
-    translated = model.generate(**tokenizer(text, return_tensors="pt", padding=True), max_length=512)
+    translated = model.generate(**tokenizer(text, return_tensors="pt", padding=True), max_length=510)
     tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
     ouch = tgt_text[0]
     return ouch
@@ -196,6 +218,14 @@ def model_switch():
             model = T5ForConditionalGeneration.from_pretrained(modeld)
     return model, tokenizer
 
+def language_switch():
+    if language == 'English':
+        eng_config()
+    elif language == 'Vietnamese':
+        viet_config()
+    elif language == 'Chinese':
+        china_config()
+
 def option_1():
     # make clicking on the main window impossible
     root.attributes('-disabled', True)
@@ -205,7 +235,14 @@ def option_1():
     window.configure(bg='black')
     window.geometry("+{}+{}".format(positionRight, positionDown))
     # label 'Current translator:'
-    current_translator_label = tk.Label(window, text='Current translator:', bg='black', fg='white')
+    # if english is the current language, the label will be 'Current tranlation model:'
+    # if vietnamese is the current language, the label will be 'Mô hình dịch hiện tại:'
+    if language == 'English':
+        current_translator_label = tk.Label(window, text='Current translation model:', bg='black', fg='white')
+    elif language == 'Vietnamese':
+        current_translator_label = tk.Label(window, text='Mô hình dịch hiện tại:', bg='black', fg='white')
+    elif language == 'Chinese':
+        current_translator_label = tk.Label(window, text='当前翻译模型:', bg='black', fg='white')
     current_translator_label.grid(row=0, column=0, padx=10, pady=10)
     # combobox
     current_translator = tk.StringVar()
@@ -220,7 +257,12 @@ def option_1():
         # open the text file and get the list of model paths
         modl_name, modl_dir = get_model()
         # opne a file dialog and choose model folder
-        file = filedialog.askdirectory(initialdir=parent_dir, title='Select model folder')
+        if language == 'English':
+            file = filedialog.askdirectory(initialdir=parent_dir, title='Select model folder')
+        elif language == 'Vietnamese':
+            file = filedialog.askdirectory(initialdir=parent_dir, title='Chọn mô hình thư mục')
+        elif language == 'Chinese':
+            file = filedialog.askdirectory(initialdir=parent_dir, title='选择模型文件夹')
         # get the name of the model
         name = file.split('/')[-1].split('.')[0]
         # add the name to the combobox
@@ -237,7 +279,12 @@ def option_1():
         # configure the combobox
         translator_combobox.configure(values=modl_name + [name])
 
-    add_button = tk.Button(window, text='Add', bg='black', fg='white', command=add)
+    if language == 'English':
+        add_button = tk.Button(window, text='Add', bg='black', fg='white', command=add)
+    elif language == 'Vietnamese':
+        add_button = tk.Button(window, text='Thêm', bg='black', fg='white', command=add)
+    elif language == 'Chinese':
+        add_button = tk.Button(window, text='加', bg='black', fg='white', command=add)
     add_button.grid(row=0, column=2, padx=10, pady=10)
 
     # button 'Change'
@@ -262,7 +309,12 @@ def option_1():
         print(model)
         return model, tokenizer
 
-    change_button = tk.Button(window, text='Change', bg='black', fg='white', command=change)
+    if language == 'English':
+        change_button = tk.Button(window, text='Change', bg='black', fg='white', command=change)
+    elif language == 'Vietnamese':
+        change_button = tk.Button(window, text='Thay đổi', bg='black', fg='white', command=change)
+    elif language == 'Chinese':
+        change_button = tk.Button(window, text='更改', bg='black', fg='white', command=change)
     change_button.grid(row=1, columnspan=2, padx=10, pady=10)
 
     root.attributes('-disabled', False)
@@ -277,26 +329,46 @@ def option_2():
     window.configure(bg='black')
     window.geometry("+{}+{}".format(positionRight, positionDown))
     # label 'Import method:'
-    import_method_label = tk.Label(window, text='Import method:', bg='black', fg='white')
+    if language == 'English':
+        import_method_label = tk.Label(window, text='Import method:', bg='black', fg='white')
+    elif language == 'Vietnamese':
+        import_method_label = tk.Label(window, text='Cách nhập tệp:', bg='black', fg='white')
+    elif language == 'Chinese':
+        import_method_label = tk.Label(window, text='导入方法:', bg='black', fg='white')
     import_method_label.grid(row=0, column=0, padx=10, pady=10)
     # combobox
     import_method = tk.StringVar()
-    import_method.set('Choose...')
+    if language == 'English':
+        import_method.set('Choose...')
+    elif language == 'Vietnamese':
+        import_method.set('Chọn...')
+    elif language == 'Chinese':
+        import_method.set('选择...')
     import_method_combobox = ttk.Combobox(window, textvariable=import_method, values=['csv', 'xlsx', 'txt'], state='readonly')
     import_method_combobox.grid(row=0, column=1, padx=10, pady=10)
     
     # csv method is the default method
     def if_csv():
         # Choose CSV file label
-        csv_label = tk.Label(tab2, text='Choose csv file:', bg='black', fg='white')
+        if language == 'English':
+            csv_label = tk.Label(tab2, text='Choose csv file:', bg='black', fg='white')
+        elif language == 'Vietnamese':
+            csv_label = tk.Label(tab2, text='Chọn tệp csv:', bg='black', fg='white')
+        elif language == 'Chinese':
+            csv_label = tk.Label(tab2, text='选择csv文件:', bg='black', fg='white')
         csv_label.grid(row=0, column=0, padx=15, pady=20)
 
         # a entry for the CSV file path
-        csv_entry = tk.Entry(tab2, width=35, bg='white', font=('Segoe UI', 10, 'normal'))
+        csv_entry = tk.Entry(tab2, width=45, bg='white', font=('Segoe UI', 10, 'normal'))
         csv_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
 
         # choose CSV file button
-        csv_button = tk.Button(tab2, text='Choose', bg='black', fg='white', command=choose_csv)
+        if language == 'English':
+            csv_button = tk.Button(tab2, text='Choose', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_csv)
+        elif language == 'Vietnamese':
+            csv_button = tk.Button(tab2, text='Chọn', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_csv)
+        elif language == 'Chinese':
+            csv_button = tk.Button(tab2, text='选择', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_csv)
         csv_button.grid(row=0, column=2, padx=10, pady=20)
 
         # translate button (by configuring the command of the translate button)
@@ -306,15 +378,25 @@ def option_2():
     def if_xlsx():
         global xlsx_entry, translate_button_xlsx
         # Choose xlsx file label
-        xlsx_label = tk.Label(tab2, text='Choose xlsx file:', bg='black', fg='white')
+        if language == 'English':      
+            xlsx_label = tk.Label(tab2, text='Choose xlsx file:', bg='black', fg='white')
+        elif language == 'Vietnamese':
+            xlsx_label = tk.Label(tab2, text='Chọn tệp xlsx:', bg='black', fg='white')
+        elif language == 'Chinese':
+            xlsx_label = tk.Label(tab2, text='选择xlsx文件:', bg='black', fg='white')
         xlsx_label.grid(row=0, column=0, padx=15, pady=20)
 
         # a entry for the xlsx file path
-        xlsx_entry = tk.Entry(tab2, width=35, bg='white', font=('Segoe UI', 10, 'normal'))
+        xlsx_entry = tk.Entry(tab2, width=45, bg='white', font=('Segoe UI', 10, 'normal'))
         xlsx_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
 
         # choose xlsx file button
-        xlsx_button = tk.Button(tab2, text='Choose', bg='black', fg='white', command=choose_xlsx)
+        if language == 'English':
+            xlsx_button = tk.Button(tab2, text='Choose', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_xlsx)
+        elif language == 'Vietnamese':
+            xlsx_button = tk.Button(tab2, text='Chọn', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_xlsx)
+        elif language == 'Chinese':
+            xlsx_button = tk.Button(tab2, text='选择', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_xlsx)
         xlsx_button.grid(row=0, column=2, padx=10, pady=20)
 
         # translate button (by configuring the command of the translate button)
@@ -325,15 +407,25 @@ def option_2():
     def if_txt():
         global txt_entry, translate_button_txt
         # Choose txt file label
-        txt_label = tk.Label(tab2, text='Choose txt file:', bg='black', fg='white')
+        if language == 'English':
+            txt_label = tk.Label(tab2, text='Choose txt file:', bg='black', fg='white')
+        elif language == 'Vietnamese':
+            txt_label = tk.Label(tab2, text='Chọn tệp txt:', bg='black', fg='white')
+        elif language == 'Chinese':
+            txt_label = tk.Label(tab2, text='选择txt文件:', bg='black', fg='white')
         txt_label.grid(row=0, column=0, padx=15, pady=20)
 
         # a entry for the txt file path
-        txt_entry = tk.Entry(tab2, width=35, bg='white', font=('Segoe UI', 10, 'normal'))
+        txt_entry = tk.Entry(tab2, width=45, bg='white', font=('Segoe UI', 10, 'normal'))
         txt_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
 
         # choose txt file button
-        txt_button = tk.Button(tab2, text='Choose', bg='black', fg='white', command=choose_txt)
+        if language == 'English':
+            txt_button = tk.Button(tab2, text='Choose', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_txt)
+        elif language == 'Vietnamese':
+            txt_button = tk.Button(tab2, text='Chọn', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_txt)
+        elif language == 'Chinese':
+            txt_button = tk.Button(tab2, text='选择', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_txt)
         txt_button.grid(row=0, column=2, padx=10, pady=20)
 
         # translate button (by configuring the command of the translate button)
@@ -350,7 +442,12 @@ def option_2():
             if_txt()
         window.destroy()
 
-    apply_button = tk.Button(window, text='Apply', bg='black', fg='white', command=apply)
+    if language == 'English':
+        apply_button = tk.Button(window, text='Apply', bg='black', fg='white', command=apply)
+    elif language == 'Vietnamese':
+        apply_button = tk.Button(window, text='Áp dụng', bg='black', fg='white', command=apply)
+    elif language == 'Chinese':
+        apply_button = tk.Button(window, text='应用', bg='black', fg='white', command=apply)
     apply_button.grid(row=1, columnspan=2, padx=10, pady=10)
 
     root.attributes('-disabled', False)
@@ -358,19 +455,34 @@ def option_2():
         
 # Choose CSV file button
 def choose_csv():
-    csv_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select CSV file', filetypes=(('CSV files', '*.csv'),))
+    if language == 'English':
+        csv_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select CSV file', filetypes=(('CSV files', '*.csv'),))
+    elif language == 'Vietnamese':
+        csv_file = filedialog.askopenfilename(initialdir=parent_dir, title='Chọn tệp CSV', filetypes=(('CSV files', '*.csv'),))
+    elif language == 'Chinese':
+        csv_file = filedialog.askopenfilename(initialdir=parent_dir, title='选择CSV文件', filetypes=(('CSV files', '*.csv'),))
     csv_entry.delete(0, 'end')
     csv_entry.insert(0, csv_file)
 
 # Choose xlsx file button
 def choose_xlsx():
-    xlsx_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select xlsx file', filetypes=(('xlsx files', '*.xlsx'),))
+    if language == 'English':
+        xlsx_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select xlsx file', filetypes=(('xlsx files', '*.xlsx'),))
+    elif language == 'Vietnamese':
+        xlsx_file = filedialog.askopenfilename(initialdir=parent_dir, title='Chọn tệp xlsx', filetypes=(('xlsx files', '*.xlsx'),))
+    elif language == 'Chinese':
+        xlsx_file = filedialog.askopenfilename(initialdir=parent_dir, title='选择xlsx文件', filetypes=(('xlsx files', '*.xlsx'),))
     xlsx_entry.delete(0, 'end')
     xlsx_entry.insert(0, xlsx_file)
 
 # Choose txt file button
 def choose_txt():
-    txt_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select txt file', filetypes=(('txt files', '*.txt'),))
+    if language == 'English':
+        txt_file = filedialog.askopenfilename(initialdir=parent_dir, title='Select txt file', filetypes=(('txt files', '*.txt'),))
+    elif language == 'Vietnamese':
+        txt_file = filedialog.askopenfilename(initialdir=parent_dir, title='Chọn tệp txt', filetypes=(('txt files', '*.txt'),))
+    elif language == 'Chinese':
+        txt_file = filedialog.askopenfilename(initialdir=parent_dir, title='选择txt文件', filetypes=(('txt files', '*.txt'),))
     txt_entry.delete(0, 'end')
     txt_entry.insert(0, txt_file)
 
@@ -391,11 +503,16 @@ def translate_and_save(csv):
             df.at[i, 'Vietnamese'] = out
             # Update the progress bar
             progress['value'] = (i + 1) / len(df) * 100
-            progress_label.configure(text=f'Progressing: {i + 1}/{len(df)} lines')
+            progress_label['text'] = f'{i + 1}/{len(df)}'
             progress.update()
     
     except Exception as e:
-        messagebox.showerror('Error', f'Something went wrong: {str(e)}')
+        if language == 'English':
+            messagebox.showerror('Error', f'Something went wrong: {str(e)}')
+        elif language == 'Vietnamese':
+            messagebox.showerror('Lỗi', f'Có gì đó không đúng: {str(e)}')
+        elif language == 'Chinese':
+            messagebox.showerror('错误', f'出了点问题: {str(e)}')
         translate_button_csv.configure(state='normal')
     
     # add 'Translated' in csv path
@@ -403,7 +520,12 @@ def translate_and_save(csv):
     # save the translated column to the CSV file
     df.to_csv(csv, encoding='utf-8-sig', index=False, header=False)
     # show a message box when the translation is done
-    messagebox.showinfo('Done', 'Translation is complete.')
+    if language == 'English':
+        messagebox.showinfo('Done', 'Translation is complete.')
+    elif language == 'Vietnamese':
+        messagebox.showinfo('Hoàn thành', 'Dịch đã hoàn tất.')
+    elif language == 'Chinese':
+        messagebox.showinfo('完成', '翻译完成。')
     # open the translated CSV file
     return csv
 
@@ -417,8 +539,14 @@ def translate_csv():
     progress = ttk.Progressbar(tab2, orient=HORIZONTAL, length=250, mode='determinate')
     progress.grid(row=2, column=1, padx=10, pady=20)
     # and the label 'Progressing: i/n lines'
-    progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    if language == 'English':
+        progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    elif language == 'Vietnamese':
+        progress_label = tk.Label(tab2, text='Đang tiến hành...', bg='black', fg='white')
+    elif language == 'Chinese':
+        progress_label = tk.Label(tab2, text='进展中...', bg='black', fg='white')
     progress_label.grid(row=3, column=1, padx=10, pady=0)
+    time.sleep(1)
     # start the translation process
     csv = translate_and_save(csv_file)
     # enable the translate button
@@ -445,8 +573,14 @@ def translate_xlsx():
     progress = ttk.Progressbar(tab2, orient=HORIZONTAL, length=250, mode='determinate')
     progress.grid(row=2, column=1, padx=10, pady=20)
     # and the label 'Progressing: i/n lines'
-    progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    if language == 'English':
+        progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    elif language == 'Vietnamese':
+        progress_label = tk.Label(tab2, text='Đang tiến hành...', bg='black', fg='white')
+    elif language == 'Chinese':
+        progress_label = tk.Label(tab2, text='进展中...', bg='black', fg='white')
     progress_label.grid(row=3, column=1, padx=10, pady=0)
+    time.sleep(1)
     # translate the CSV file
     temp_tl = translate_and_save(temp)
     # remove the existing file if there is one
@@ -485,8 +619,14 @@ def translate_txt():
     progress = ttk.Progressbar(tab2, orient=HORIZONTAL, length=250, mode='determinate')
     progress.grid(row=2, column=1, padx=10, pady=20)
     # and the label 'Progressing: i/n lines'
-    progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    if language == 'English':
+        progress_label = tk.Label(tab2, text='Progressing...', bg='black', fg='white')
+    elif language == 'Vietnamese':
+        progress_label = tk.Label(tab2, text='Đang tiến hành...', bg='black', fg='white')
+    elif language == 'Chinese':
+        progress_label = tk.Label(tab2, text='进展中...', bg='black', fg='white')
     progress_label.grid(row=3, column=1, padx=10, pady=0)
+    time.sleep(1)
     # translate the CSV file
     temp_tl = translate_and_save(temp)
     # remove the existing file if there is one
@@ -503,17 +643,111 @@ def translate_txt():
     # open the translated CSV file
     os.startfile(csv)
 
+def eng_config():
+    global language
+    # Configure everything to English
+    root.title('Chingchong to Vietnamese')
+    input_label.configure(text='Input:')
+    translate_button.configure(text='Translate')
+    output_label.configure(text='Output:')
+    csv_label.configure(text='Choose csv file:')
+    csv_button.configure(text='Choose')
+    translate_button_csv.configure(text='Translate')
+    csv_entry.configure(width=45)
+    csv_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
+    translate_button.configure(width=20)
+    translate_button.grid(columnspan=3, padx=5, pady=5)
+    output_box.configure(height=6, width=60)
+    output_box.pack(expand=True, fill='both')
+    tab_control.tab(0, text='Regular translation')
+    tab_control.tab(1, text='File translation')
+    optionsmenu.entryconfigure(0, label='Change translators...')
+    optionsmenu.entryconfigure(1, label='Change file import methods...')
+    optionsmenu.entryconfigure(2, label='Language')
+    filemenu.entryconfigure(0, label='Exit')
+    language = 'English'
+    # remove '\nEnglish' from lang.txt and append it to the end of the file
+    with open(Path(__file__).with_name('lang.txt'), 'r') as file:
+        lines = file.readlines()
+    lines = [line.strip() for line in lines if line.strip() != language]
+    lines.append(language)
+    with open(Path(__file__).with_name('lang.txt'), 'w') as file:
+        file.write('\n'.join(lines))
+    return language
+
+def viet_config():
+    global language
+    # Configure everything to Vietnamese
+    root.title('Chingchong to Vietnamese')
+    input_label.configure(text='Nhập:')
+    translate_button.configure(text='Dịch')
+    output_label.configure(text='Kết quả:')
+    csv_label.configure(text='Chọn tệp csv:')
+    csv_button.configure(text='Chọn')
+    translate_button_csv.configure(text='Dịch')
+    csv_entry.configure(width=45)
+    csv_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
+    translate_button.configure(width=20)
+    translate_button.grid(columnspan=3, padx=5, pady=5)
+    output_box.configure(height=6, width=60)
+    output_box.pack(expand=True, fill='both')
+    tab_control.tab(0, text='Dịch thông thường')
+    tab_control.tab(1, text='Dịch file')
+    optionsmenu.entryconfigure(0, label='Thay đổi mô hình dịch...')
+    optionsmenu.entryconfigure(1, label='Thay đổi loại tệp nhập vào...')
+    optionsmenu.entryconfigure(2, label='Ngôn ngữ')
+    filemenu.entryconfigure(0, label='Thoát')
+    language = 'Vietnamese'
+    # remove '\nVietnamese' from lang.txt and write it to the end of the file
+    with open(Path(__file__).with_name('lang.txt'), 'r') as file:
+        lines = file.readlines()
+    lines = [line.strip() for line in lines if line.strip() != language]
+    lines.append(language)
+    with open(Path(__file__).with_name('lang.txt'), 'w') as file:
+        file.write('\n'.join(lines))
+    return language
+
+def china_config():
+    global language
+    # Configure everything to Chinese
+    root.title('Chingchong to Vietnamese')
+    input_label.configure(text='输入：')
+    translate_button.configure(text='翻译')
+    output_label.configure(text='输出：')
+    csv_label.configure(text='选择csv文件：')
+    csv_button.configure(text='选择')
+    translate_button_csv.configure(text='翻译')
+    csv_entry.configure(width=45)
+    csv_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
+    translate_button.configure(width=20)
+    translate_button.grid(columnspan=3, padx=5, pady=5)
+    output_box.configure(height=6, width=60)
+    output_box.pack(expand=True, fill='both')
+    tab_control.tab(0, text='常规翻译')
+    tab_control.tab(1, text='文件翻译')
+    optionsmenu.entryconfigure(0, label='更改翻译模型...')
+    optionsmenu.entryconfigure(1, label='更改文件导入方法...')
+    optionsmenu.entryconfigure(2, label='语言')
+    filemenu.entryconfigure(0, label='退出')
+    language = 'Chinese'
+    # remove 'Chinese' from lang.txt and append it to the end of the file
+    with open(Path(__file__).with_name('lang.txt'), 'r') as file:
+        lines = file.readlines()
+    lines = [line.strip() for line in lines if line.strip() != language]
+    lines.append(language)
+    with open(Path(__file__).with_name('lang.txt'), 'w') as file:
+        file.write('\n'.join(lines))
+    return language
+
 # root window
 root = tk.Tk()
 root.title('Chingchong to Vietnamese')
-root.geometry('500x260')
+root.geometry('600x380')
 root.configure(bg='black')
 
-# position the window in the center of the screen
-windowWidth = root.winfo_reqwidth()
-windowHeight = root.winfo_reqheight()
-positionRight = int(root.winfo_screenwidth()/2 - windowWidth/2)
-positionDown = int(root.winfo_screenheight()/2 - windowHeight/2)
+# position the window center in the center of the screen
+positionRight = int(root.winfo_screenwidth() / 2 - 600 / 2)
+positionDown = int(root.winfo_screenheight() / 2 - 380 / 2)
 root.geometry("+{}+{}".format(positionRight, positionDown))
 
 # Menu bar
@@ -528,7 +762,14 @@ menu.add_cascade(label='File', menu=filemenu)
 # options
 optionsmenu = Menu(menu, tearoff=0)
 optionsmenu.add_command(label='Change translators...', command=option_1)
-optionsmenu.add_command(label='Change import methods...', command=option_2)
+optionsmenu.add_command(label='Change file import methods...', command=option_2)
+# options language with submenus of it
+optionsmenu_lang = Menu(optionsmenu, tearoff=0)
+optionsmenu_lang.add_command(label='English', command=eng_config)
+optionsmenu_lang.add_command(label='Tiếng Việt', command=viet_config)
+optionsmenu_lang.add_command(label='中文', command=china_config)
+optionsmenu.add_cascade(label='Language', menu=optionsmenu_lang)
+
 menu.add_cascade(label='Options', menu=optionsmenu)
 
 # first tab is regular translation and second tab is CSV translation
@@ -536,7 +777,7 @@ tab_control = ttk.Notebook(root)
 tab1 = ttk.Frame(tab_control)
 tab2 = ttk.Frame(tab_control)
 tab_control.add(tab1, text='Regular translation')
-tab_control.add(tab2, text='CSV translation')
+tab_control.add(tab2, text='File translation')
 tab_control.pack(expand=1, fill='both')
 sth = ttk.Style()
 sth.configure('TNotebook', background='black', foreground='white')
@@ -546,7 +787,7 @@ sth.configure('TFrame', background='black')
 # tab1
 
 # input label
-input_label = tk.Label(tab1, text='Input:', bg='black', fg='white')
+input_label = tk.Label(tab1, text='Input:', bg='black', fg='white', font=('Segoe UI', 10, 'normal'))
 input_label.grid(row=0, column=0, padx=30, pady=20)
 
 # a frame for the input box
@@ -554,15 +795,15 @@ input_frame = tk.Frame(tab1, bg='black')
 input_frame.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
 
 # input box
-input_box = tk.Text(input_frame, height=3, width=50, bg='white', font=('Segoe UI', 10, 'normal'))
-input_box.pack()
+input_box = tk.Text(input_frame, height=6, width=60, bg='white', font=('Segoe UI', 10, 'normal'))
+input_box.pack(expand=True, fill='both')
 
 # translate button (in the center)
-translate_button = tk.Button(tab1, text='Translate', bg='black', fg='white', command=lambda: translate(input_box.get('1.0', 'end')), width=20)
+translate_button = tk.Button(tab1, text='Translate', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=lambda: translate(input_box.get('1.0', 'end')), width=20)
 translate_button.grid(columnspan=3, padx=5, pady=5)
 
 # output label
-output_label = tk.Label(tab1, text='Output:', bg='black', fg='white')
+output_label = tk.Label(tab1, text='Output:', bg='black', fg='white', font=('Segoe UI', 10, 'normal'))
 output_label.grid(row=2, column=0, padx=30, pady=20)
 
 # a frame for the output box
@@ -570,27 +811,28 @@ output_frame = tk.Frame(tab1, bg='black')
 output_frame.grid(row=2, column=1, padx=10, pady=20, sticky='ew')
 
 # output box
-output_box = tk.Text(output_frame, height=3, width=50, bg='white', font=('Segoe UI', 10, 'normal'), state='disabled')
-output_box.pack()
+output_box = tk.Text(output_frame, height=6, width=60, bg='white', font=('Segoe UI', 10, 'normal'), state='disabled')
+output_box.pack(expand=True, fill='both')
 
 # tab2
 
 # Choose CSV file label
-csv_label = tk.Label(tab2, text='Choose csv file:', bg='black', fg='white')
+csv_label = tk.Label(tab2, text='Choose csv file:', bg='black', fg='white', font=('Segoe UI', 10, 'normal'))
 csv_label.grid(row=0, column=0, padx=15, pady=20)
 
 # a entry for the CSV file path
-csv_entry = tk.Entry(tab2, width=35, bg='white', font=('Segoe UI', 10, 'normal'))
+csv_entry = tk.Entry(tab2, width=45, bg='white', font=('Segoe UI', 10, 'normal'))
 csv_entry.grid(row=0, column=1, padx=10, pady=20, sticky='ew')
 
 # choose CSV file button
-csv_button = tk.Button(tab2, text='Choose', bg='black', fg='white', command=choose_csv)
+csv_button = tk.Button(tab2, text='Choose', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=choose_csv)
 csv_button.grid(row=0, column=2, padx=10, pady=20)
 
 # translate button
-translate_button_csv = tk.Button(tab2, text='Translate', bg='black', fg='white', command=translate_csv, width=20)
+translate_button_csv = tk.Button(tab2, text='Translate', bg='black', fg='white', font=('Segoe UI', 10, 'bold'), command=translate_csv, width=20)
 translate_button_csv.grid(column=1, padx=5, pady=5)
 
-root.mainloop()
+# language initialization
+language_switch()
 
-# Base model: Helsinki-NLP/opus-mt-zh-vi
+root.mainloop()
