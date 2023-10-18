@@ -41,7 +41,3 @@ python whatisgui.py
 ```
 
 tehe uhe
-
-Initial release version here: https://drive.google.com/drive/folders/1m8545hPhR1399vPn56WvO5SdfOL6DHRV?usp=sharing
-
-Compiled from py to exe so no dependencies required
